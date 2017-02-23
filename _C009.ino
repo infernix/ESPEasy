@@ -149,6 +149,43 @@ boolean CPlugin_009(byte function, struct EventStruct *event, String& string)
             url += UserVar[event->BaseVarIndex + 2];
             url += toString(UserVar[event->BaseVarIndex + 2],ExtraTaskSettings.TaskDeviceValueDecimals[2]);
             break;
+          case SENSOR_TYPE_QUADRUPLE:
+            // setreading #1
+            url += F("setreading%20");
+            url += Settings.Name;
+            url += F("%20");
+            url += ExtraTaskSettings.TaskDeviceValueNames[0];
+            url += F("%20");
+            url += toString(UserVar[event->BaseVarIndex],ExtraTaskSettings.TaskDeviceValueDecimals[0]);
+            // setreading #2
+            url += F("%3B");
+            url += F("setreading%20");
+            url += Settings.Name;
+            url += F("%20");
+            url += ExtraTaskSettings.TaskDeviceValueNames[1];
+            url += F("%20");
+            url += toString(UserVar[event->BaseVarIndex + 1],ExtraTaskSettings.TaskDeviceValueDecimals[1]);
+            // setreading #3
+            url += F("%3B");
+            url += "setreading%20";
+            url += Settings.Name;
+            url += F("%20");
+            url += ExtraTaskSettings.TaskDeviceValueNames[2];
+            url += F("%20");
+            url += UserVar[event->BaseVarIndex + 2];
+            url += toString(UserVar[event->BaseVarIndex + 2],ExtraTaskSettings.TaskDeviceValueDecimals[2]);
+
+            // setreading #4
+            url += F("%3B");
+            url += "setreading%20";
+            url += Settings.Name;
+            url += F("%20");
+            url += ExtraTaskSettings.TaskDeviceValueNames[3];
+            url += F("%20");
+            url += UserVar[event->BaseVarIndex + 3];
+            url += toString(UserVar[event->BaseVarIndex + 3],ExtraTaskSettings.TaskDeviceValueDecimals[3]);
+            break;
+
           case SENSOR_TYPE_SWITCH:
             url += F("set%20");
             url += Settings.Name;

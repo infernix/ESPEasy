@@ -90,6 +90,25 @@ boolean CPlugin_004(byte function, struct EventStruct *event, String& string)
             postDataStr += "=";
             postDataStr += toString(UserVar[event->BaseVarIndex + 2],ExtraTaskSettings.TaskDeviceValueDecimals[2]);
             break;
+          case SENSOR_TYPE_QUADRUPLE:
+            postDataStr += F("&field");
+            postDataStr += event->idx;
+            postDataStr += "=";
+            postDataStr += toString(UserVar[event->BaseVarIndex],ExtraTaskSettings.TaskDeviceValueDecimals[0]);
+            postDataStr += F("&field");
+            postDataStr += event->idx + 1;
+            postDataStr += "=";
+            postDataStr += toString(UserVar[event->BaseVarIndex + 1],ExtraTaskSettings.TaskDeviceValueDecimals[1]);
+            postDataStr += F("&field");
+            postDataStr += event->idx + 2;
+            postDataStr += "=";
+            postDataStr += toString(UserVar[event->BaseVarIndex + 2],ExtraTaskSettings.TaskDeviceValueDecimals[2]);
+            postDataStr += F("&field");
+            postDataStr += event->idx + 3;
+            postDataStr += "=";
+            postDataStr += toString(UserVar[event->BaseVarIndex + 3],ExtraTaskSettings.TaskDeviceValueDecimals[3]);
+            break;
+
         }
         //postDataStr += F("\r\n\r\n"); // PM_CZ: Removed - breaks the last value on the line
 

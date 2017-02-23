@@ -65,6 +65,24 @@ boolean CPlugin_008(byte function, struct EventStruct *event, String& string)
               HTTPSend(event, 2, UserVar[event->BaseVarIndex + 2], 0);
               break;
             }
+          case SENSOR_TYPE_QUADRUPLE:
+            {
+              HTTPSend(event, 0, UserVar[event->BaseVarIndex], 0);
+              unsigned long timer = millis() + Settings.MessageDelay;
+              while (millis() < timer)
+                backgroundtasks();
+              HTTPSend(event, 1, UserVar[event->BaseVarIndex + 1], 0);
+              timer = millis() + Settings.MessageDelay;
+              while (millis() < timer)
+                backgroundtasks();
+              HTTPSend(event, 2, UserVar[event->BaseVarIndex + 2], 0);
+              timer = millis() + Settings.MessageDelay;
+              while (millis() < timer)
+                backgroundtasks();
+              HTTPSend(event, 3, UserVar[event->BaseVarIndex + 3], 0);
+              break;
+            }
+
         }
         break;
       }
