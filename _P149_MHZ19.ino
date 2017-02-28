@@ -30,8 +30,9 @@ SoftwareSerial *Plugin_149_S8;
 byte mhzCmdReadPPM[9] = {0xFF,0x01,0x86,0x00,0x00,0x00,0x00,0x00,0x79}; 
 byte mhzResp[9];    // 9 bytes bytes response
 byte mhzCmdCalibrateZero[9] = {0xFF,0x01,0x87,0x00,0x00,0x00,0x00,0x00,0x78}; 
-byte mhzCmdCalibrateSpan[9] = {0xFF,0x01,0x88,0x07,0x00,0x00,0x00,0x00,0xA0}; 
-byte mhzCmdReset[9] = {0xFF,0x01,0x8d,0x00,0x00,0x00,0x00,0x00,0x78}; 
+byte mhzCmdABCEnable[9] = {0xFF,0x01,0x79,0xA0,0x00,0x00,0x00,0x00,0xE6}; 
+byte mhzCmdABCDisable[9] = {0xFF,0x01,0x79,0x00,0x00,0x00,0x00,0x00,0x86}; 
+byte mhzCmdReset[9] = {0xFF,0x01,0x8d,0x00,0x00,0x00,0x00,0x00,0x72}; 
 
 boolean Plugin_149(byte function, struct EventStruct *event, String& string)
 {
@@ -99,6 +100,23 @@ boolean Plugin_149(byte function, struct EventStruct *event, String& string)
           addLog(LOG_LEVEL_INFO, log);
           success = true;
         }
+
+        if (command == F("mhzabcenable"))
+        {
+          Plugin_149_S8->write(mhzCmdABCEnable, 9);
+          log = String(F("MHZ19: Sent sensor ABC Enable!"));
+          addLog(LOG_LEVEL_INFO, log);
+          success = true;
+        }
+
+        if (command == F("mhzabcdisable"))
+        {
+          Plugin_149_S8->write(mhzCmdABCDisable, 9);
+          log = String(F("MHZ19: Sent sensor ABC Disable!"));
+          addLog(LOG_LEVEL_INFO, log);
+          success = true;
+        }
+
 
         break;
       }
