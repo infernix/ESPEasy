@@ -33,6 +33,11 @@ byte mhzCmdCalibrateZero[9] = {0xFF,0x01,0x87,0x00,0x00,0x00,0x00,0x00,0x78};
 byte mhzCmdABCEnable[9] = {0xFF,0x01,0x79,0xA0,0x00,0x00,0x00,0x00,0xE6}; 
 byte mhzCmdABCDisable[9] = {0xFF,0x01,0x79,0x00,0x00,0x00,0x00,0x00,0x86}; 
 byte mhzCmdReset[9] = {0xFF,0x01,0x8d,0x00,0x00,0x00,0x00,0x00,0x72}; 
+byte mhzCmdMeasurementRange1000[9] = {0xFF,0x01,0x99,0x00,0x00,0x00,0x03,0xE8,0x7B};
+byte mhzCmdMeasurementRange2000[9] = {0xFF,0x01,0x99,0x00,0x00,0x00,0x07,0xD0,0x8F}; 
+byte mhzCmdMeasurementRange3000[9] = {0xFF,0x01,0x99,0x00,0x00,0x00,0x0B,0xB8,0xA3}; 
+byte mhzCmdMeasurementRange5000[9] = {0xFF,0x01,0x99,0x00,0x00,0x00,0x13,0x88,0xCB}; 
+
 
 boolean Plugin_149(byte function, struct EventStruct *event, String& string)
 {
@@ -117,6 +122,37 @@ boolean Plugin_149(byte function, struct EventStruct *event, String& string)
           success = true;
         }
 
+        if (command == F("mhzmeasurementrange1000"))
+        {
+          Plugin_149_S8->write(mhzCmdMeasurementRange1000, 9);
+          log = String(F("MHZ19: Sent measurement range 0-1000PPM!"));
+          addLog(LOG_LEVEL_INFO, log);
+          success = true;
+        }
+
+        if (command == F("mhzmeasurementrange2000"))
+        {
+          Plugin_149_S8->write(mhzCmdMeasurementRange2000, 9);
+          log = String(F("MHZ19: Sent measurement range 0-2000PPM!"));
+          success = true;
+          addLog(LOG_LEVEL_INFO, log);
+        }
+
+        if (command == F("mhzmeasurementrange3000"))
+        {
+          Plugin_149_S8->write(mhzCmdMeasurementRange3000, 9);
+          log = String(F("MHZ19: Sent measurement range 0-3000PPM!"));
+          addLog(LOG_LEVEL_INFO, log);
+          success = true;
+        }
+
+        if (command == F("mhzmeasurementrange5000"))
+        {
+          Plugin_149_S8->write(mhzCmdMeasurementRange5000, 9);
+          log = String(F("MHZ19: Sent measurement range 0-5000PPM!"));
+          addLog(LOG_LEVEL_INFO, log);
+          success = true;
+        }
 
         break;
       }
@@ -139,15 +175,53 @@ boolean Plugin_149(byte function, struct EventStruct *event, String& string)
               crc = 255 - crc;
               crc++;
               
-          if ( !(mhzResp[0] == 0xFF && mhzResp[1] == 0x86 && mhzResp[8] == crc) ) {
+          // log and ignore any messages that fail CRC
+          if ( !(mhzResp[8] == crc) ) {
              String log = F("MHZ19: CRC error: ");
              log += String(crc); log += " / "; log += String(mhzResp[8]);
+             log += F(" raw: ");
+             log += String(mhzResp[0], HEX);
+             log += F(" ");
+             log += String(mhzResp[1], HEX);
+             log += F(" ");
+             log += String(mhzResp[2], HEX);
+             log += F(" ");
+             log += String(mhzResp[3], HEX);
+             log += F(" ");
+             log += String(mhzResp[4], HEX);
+             log += F(" ");
+             log += String(mhzResp[5], HEX);
+             log += F(" ");
+             log += String(mhzResp[6], HEX);
+             log += F(" ");
+             log += String(mhzResp[7], HEX);
+             log += F(" ");
+             log += String(mhzResp[8], HEX);
              addLog(LOG_LEVEL_ERROR, log);
+             // Sometimes there is a misalignment in the serial read 
+             // and the starting byte 0xFF isn't the first read byte.
+             // This goes on forever.
+             // There must be a better way to handle this, but here 
+             // we're trying to shift it so that 0xFF is the next byte
+             byte crcshift;
+             for (i = 1; i < 8; i++) {
+                crcshift = Plugin_149_S8->peek();
+                if (crcshift == 0xFF) {
+                  String log = F("MHZ19: Shifted ");
+                  log += i;
+                  log += F(" bytes to attempt to fix buffer alignment");
+                  addLog(LOG_LEVEL_ERROR, log);
+                  break;
+                } else {
+                 crcshift = Plugin_149_S8->read();
+                }
+             }
              success = false;
              break;
-             
-          } else {
-            
+
+          // Process responses to 0x86
+          } else if (mhzResp[0] == 0xFF && mhzResp[1] == 0x86 && mhzResp[8] == crc)  {
+          
               unsigned int mhzRespHigh = (unsigned int) mhzResp[2];
               unsigned int mhzRespLow = (unsigned int) mhzResp[3];
               ppm = (256*mhzRespHigh) + mhzRespLow;
@@ -157,25 +231,79 @@ boolean Plugin_149(byte function, struct EventStruct *event, String& string)
               s = mhzRespS;
               unsigned int mhzRespUHigh = (unsigned int) mhzResp[6];
               unsigned int mhzRespULow = (unsigned int) mhzResp[7];
-              u = (((256*mhzRespUHigh) + mhzRespULow) * 0.898) - 8801;
+              u = (256*mhzRespUHigh) + mhzRespULow;
 
+              String log = F("MHZ19: ");
+              // Sensor reports this as 15000 during boot, so don't process readings during that time
+              if (u == 15000) {
+
+                log += F("Bootup detected! PPM value: ");
+                success = false;
+
+              // If s = 0x40 the reading is stable; anything else should be ignored
+              } else if (s < 64) {
+                log += F("Unstable reading, ignoring! PPM value: ");
+                success = false;
+
+              // Stable readings are used
+              } else {
+
+                log += F("PPM value: ");
+                success = true;
+
+                UserVar[event->BaseVarIndex] = (float)ppm;
+                UserVar[event->BaseVarIndex + 1] = (float)temp;
+                UserVar[event->BaseVarIndex + 2] = (float)s;
+                UserVar[event->BaseVarIndex + 3] = (float)u;
+              }
+
+              // Log values in all cases
+              log += ppm;
+              log += F(" Temp/S/U values: ");
+              log += temp;
+              log += F("/");
+              log += s;
+              log += F("/");
+              log += u;
+              addLog(LOG_LEVEL_INFO, log);
+              break;
+
+
+          } else if (mhzResp[0] == 0xFF && mhzResp[1] == 0x99 && mhzResp[8] == crc)  {
+
+            String log = F("MHZ19: Received measurement range acknowledgment! ");
+            log += F("Expecting sensor reset...");
+            addLog(LOG_LEVEL_INFO, log);
+            success = false;
+            break;
+
+          // log verbosely anything else that the sensor reports
+          } else {
+
+              String log = F("MHZ19: Unknown response: ");
+              log += String(mhzResp[0], HEX);
+              log += F(" ");
+              log += String(mhzResp[1], HEX);
+              log += F(" ");
+              log += String(mhzResp[2], HEX);
+              log += F(" ");
+              log += String(mhzResp[3], HEX);
+              log += F(" ");
+              log += String(mhzResp[4], HEX);
+              log += F(" ");
+              log += String(mhzResp[5], HEX);
+              log += F(" ");
+              log += String(mhzResp[6], HEX);
+              log += F(" ");
+              log += String(mhzResp[7], HEX);
+              log += F(" ");
+              log += String(mhzResp[8], HEX);
+              addLog(LOG_LEVEL_INFO, log);
+              success = false;
+              break;
+           
           }
-          
-          UserVar[event->BaseVarIndex] = (float)ppm;
-          UserVar[event->BaseVarIndex + 1] = (float)temp;
-          UserVar[event->BaseVarIndex + 2] = (float)s;
-          UserVar[event->BaseVarIndex + 3] = (float)u;
-          String log = F("MHZ19: PPM value: ");
-          log += ppm;
-          log += F(" Temp/S/U values: ");
-          log += temp;
-          log += F("/");
-          log += s;
-          log += F("/");
-          log += u;
-          addLog(LOG_LEVEL_INFO, log);
-          success = true;
-          break;
+
         }
         break;
       }
